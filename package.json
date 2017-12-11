@@ -8,6 +8,7 @@
     "start-prod": "better-npm-run start-prod",
     "start-prod-api": "better-npm-run start-prod-api",
     "start-streamer": "better-npm-run start-bundle",
+    "dev": "better-npm-run dev",
     "build": "better-npm-run build",
     "build-backend": "webpack --config webpack/server.config.js",
     "postinstall": "npm run build",
@@ -43,6 +44,12 @@
       "command": "webpack --verbose --colors --display-error-details --config webpack/prod.config.js",
       "env": {
         "NODE_ENV": "production"
+      }
+    },
+    "dev": {
+      "command": "webpack -d --watch --colors --config webpack/dev.config.js",
+      "env": {
+        "NODE_ENV": "development"
       }
     }
   },
