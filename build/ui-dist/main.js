@@ -115,7 +115,12 @@
 	var history = (0, _reactRouterRedux.syncHistoryWithStore)(_browserHistory, store);
 	
 	function initSocket() {
-	  var socket = (0, _socket2.default)('', { path: '/ws' });
+	  var socket = (0, _socket2.default)('', {
+	    path: '/ws',
+	    reconnection: true,
+	    reconnectionDelay: 1000,
+	    reconnectionAttempts: 10 //for demo purpose
+	  });
 	  socket.on('snapshot', function (data) {
 	    console.log(data);
 	    socket.emit('my other event', { my: 'data from client' });
@@ -124,8 +129,21 @@
 	    console.log(data);
 	  });
 	  socket.on('disconnect', function () {
-	    socket = undefined;
+	    console.log("disconnect");
 	  });
+	  socket.on('reconnect_attempt', function (number) {
+	    console.log("reconnect_attempt", number);
+	  });
+	  socket.on('reconnect', function () {
+	    console.log("reconnect");
+	  });
+	  socket.on('reconnect_error', function () {
+	    console.log("reconnect_error");
+	  });
+	  socket.on('reconnect_failed', function () {
+	    console.log("reconnect_failed");
+	  });
+	
 	  return socket;
 	}
 	global.socket = initSocket();
@@ -55856,6 +55874,10 @@
 	
 	var _MyCell2 = _interopRequireDefault(_MyCell);
 	
+	var _Alert = __webpack_require__(/*! ../../components/Alert */ 914);
+	
+	var _Alert2 = _interopRequireDefault(_Alert);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var _components = {
@@ -55889,7 +55911,9 @@
 	
 	    _this.state = {
 	      rows: [],
-	      cols: new Array(10)
+	      cols: new Array(10),
+	      showAlert: false,
+	      alert: {}
 	    };
 	    //By using arrow funcions, we can get rid of these bind functions
 	    _this.onSnapshotReceived = _this.onSnapshotReceived.bind(_this);
@@ -55899,10 +55923,34 @@
 	    }
 	
 	    _this.onUpdateReceived = _this.onUpdateReceived.bind(_this);
-	    // this._cell = this._cell.bind(this);
 	
 	    if (!(typeof _this.onUpdateReceived === 'function')) {
 	      throw new TypeError('Value of "this.onUpdateReceived" violates contract.\n\nExpected:\n(any) => any\n\nGot:\n' + _inspect(_this.onUpdateReceived));
+	    }
+	
+	    _this.onDisconnect = _this.onDisconnect.bind(_this);
+	
+	    if (!(typeof _this.onDisconnect === 'function')) {
+	      throw new TypeError('Value of "this.onDisconnect" violates contract.\n\nExpected:\n() => any\n\nGot:\n' + _inspect(_this.onDisconnect));
+	    }
+	
+	    _this.onReconnnectAttempt = _this.onReconnnectAttempt.bind(_this);
+	
+	    if (!(typeof _this.onReconnnectAttempt === 'function')) {
+	      throw new TypeError('Value of "this.onReconnnectAttempt" violates contract.\n\nExpected:\n(any) => any\n\nGot:\n' + _inspect(_this.onReconnnectAttempt));
+	    }
+	
+	    _this.onReconnect = _this.onReconnect.bind(_this);
+	
+	    if (!(typeof _this.onReconnect === 'function')) {
+	      throw new TypeError('Value of "this.onReconnect" violates contract.\n\nExpected:\n() => any\n\nGot:\n' + _inspect(_this.onReconnect));
+	    }
+	
+	    _this.onReconnectFailed = _this.onReconnectFailed.bind(_this);
+	    // this._cell = this._cell.bind(this);
+	
+	    if (!(typeof _this.onReconnectFailed === 'function')) {
+	      throw new TypeError('Value of "this.onReconnectFailed" violates contract.\n\nExpected:\n() => any\n\nGot:\n' + _inspect(_this.onReconnectFailed));
 	    }
 	
 	    _this._headerCell = _this._headerCell.bind(_this);
@@ -55976,8 +56024,57 @@
 	      this.setState({ rows: rows });
 	    }
 	  }, {
-	    key: '_headerCell',
+	    key: 'onDisconnect',
+	    value: function onDisconnect() {
+	      this.setState({
+	        showAlert: true,
+	        alert: {
+	          message: "Connection lost, trying to reconnect...",
+	          type: "danger"
+	        }
+	      });
+	    }
+	  }, {
+	    key: 'onReconnnectAttempt',
+	    value: function onReconnnectAttempt(number) {
+	      this.setState({
+	        showAlert: true,
+	        alert: {
+	          message: "Number of attempts: " + number,
+	          type: "danger"
+	        }
+	      });
+	    }
+	  }, {
+	    key: 'onReconnect',
+	    value: function onReconnect() {
+	      var _this3 = this;
 	
+	      this.setState({
+	        showAlert: true,
+	        alert: {
+	          message: "Reconnected!",
+	          type: "success"
+	        }
+	      });
+	      window.setTimeout(function () {
+	        _this3.setState({
+	          showAlert: false,
+	          alert: {}
+	        });
+	      }, 1500);
+	    }
+	  }, {
+	    key: 'onReconnectFailed',
+	    value: function onReconnectFailed() {
+	      this.setState({
+	        showAlert: true,
+	        alert: {
+	          message: "Unable to reconnect, please try again later.",
+	          type: "danger"
+	        }
+	      });
+	    }
 	
 	    // _cell(cellProps) {
 	    //   const rowIndex = cellProps.rowIndex;
@@ -55989,6 +56086,8 @@
 	    //   );
 	    // }
 	
+	  }, {
+	    key: '_headerCell',
 	    value: function _headerCell(cellProps) {
 	      var col = this.state.cols[cellProps.columnKey];
 	      return _react3.default.createElement(
@@ -56000,9 +56099,8 @@
 	  }, {
 	    key: '_generateCols',
 	    value: function _generateCols() {
-	      var _this3 = this;
+	      var _this4 = this;
 	
-	      console.log('generating...');
 	      var cols = [];
 	      this.state.cols.forEach(function (row, index) {
 	        cols.push(_react3.default.createElement(_fixedDataTable.Column, {
@@ -56010,45 +56108,61 @@
 	          flexGrow: 1,
 	          cell: _react3.default.createElement(_MyCell2.default, {
 	            columnKey: index,
-	            rows: _this3.state.rows,
-	            cols: _this3.state.cols }),
-	          header: _this3._headerCell,
+	            rows: _this4.state.rows,
+	            cols: _this4.state.cols }),
+	          header: _this4._headerCell,
 	          columnKey: index
 	        }));
 	      });
-	      console.log(cols);
 	      return cols;
 	    }
 	  }, {
 	    key: 'componentDidMount',
 	    value: function componentDidMount() {
-	      if (socket) {
-	        socket.on('snapshot', this.onSnapshotReceived);
-	        socket.on('updates', this.onUpdateReceived);
+	      if (window.socket) {
+	        window.socket.on('snapshot', this.onSnapshotReceived);
+	        window.socket.on('updates', this.onUpdateReceived);
+	        window.socket.on('disconnect', this.onDisconnect);
+	        window.socket.on('reconnect_attempt', this.onReconnnectAttempt);
+	        window.socket.on('reconnect', this.onReconnect);
+	        window.socket.on('reconnect_failed', this.onReconnectFailed);
 	      }
 	    }
 	  }, {
 	    key: 'componentWillUnmount',
 	    value: function componentWillUnmount() {
-	      if (socket) {
-	        socket.removeListener('snapshot', this.onSnapshotReceived);
-	        socket.removeListener('updates', this.onUpdateReceived);
+	      if (window.socket) {
+	        window.socket.removeListener('snapshot', this.onSnapshotReceived);
+	        window.socket.removeListener('updates', this.onUpdateReceived);
+	        window.socket.removeListener('disconnect', this.onDisconnect);
+	        window.socket.removeListener('reconnect_attempt', this.onReconnnectAttempt);
+	        window.socket.removeListener('reconnect', this.onReconnect);
+	        window.socket.removeListener('reconnect_failed', this.onReconnectFailed);
 	      }
 	    }
 	  }, {
 	    key: 'render',
 	    value: function render() {
 	      var columns = this._generateCols();
+	      var _state = this.state,
+	          showAlert = _state.showAlert,
+	          alert = _state.alert;
+	
 	      return _react3.default.createElement(
-	        _fixedDataTable.Table,
-	        {
-	          rowHeight: 30,
-	          width: window.innerWidth,
-	          maxHeight: window.innerHeight,
-	          headerHeight: 35,
-	          rowsCount: this.state.rows.length
-	        },
-	        columns
+	        'div',
+	        null,
+	        _react3.default.createElement(_Alert2.default, { show: showAlert, message: alert.message, type: alert.type }),
+	        _react3.default.createElement(
+	          _fixedDataTable.Table,
+	          {
+	            rowHeight: 30,
+	            width: window.innerWidth,
+	            maxHeight: window.innerHeight,
+	            headerHeight: 35,
+	            rowsCount: this.state.rows.length
+	          },
+	          columns
+	        )
 	      );
 	    }
 	  }]);
@@ -85916,6 +86030,8 @@
 	    };
 	}
 	
+	//Wanted to extends PureComponent instead of implement shouldComponentUpdate, 
+	//but it looks like react 14 doesn't come with it
 	var MyCell = _wrapComponent('MyCell')(function (_Component) {
 	    (0, _inherits3.default)(MyCell, _Component);
 	
@@ -85949,11 +86065,18 @@
 	
 	            var newContent = this.getInitContent(nextProps);
 	            if (content !== newContent) {
-	                this._className = newContent > content ? "up" : newContent < content ? "down" : "";
+	                this._className = newContent > content ? "up" : newContent < content ? "down" : "default";
 	                this.setState({
 	                    content: newContent
 	                });
 	            }
+	        }
+	    }, {
+	        key: 'shouldComponentUpdate',
+	        value: function shouldComponentUpdate(nextProps, nextState) {
+	            var content = this.state.content;
+	
+	            return content !== nextState.content;
 	        }
 	    }, {
 	        key: 'render',
@@ -86014,10 +86137,44 @@
 	
 	
 	// module
-	exports.push([module.id, ".up {\r\n    background-color: green;\r\n}\r\n\r\n.down {\r\n    background-color: red;\r\n}", ""]);
+	exports.push([module.id, ".up {\r\n    color: green;\r\n}\r\n\r\n.down {\r\n    color: red;\r\n}\r\n\r\n.default {\r\n    color: black;\r\n}\r\n\r\n.alert {\r\n    line-height: 2.5;\r\n    padding-left: 10px;\r\n    margin-bottom: 10px;\r\n}\r\n\r\n.alert.danger {\r\n    background-color: #ffdddd;\r\n    border-left: 6px solid #f44336;\r\n}\r\n\r\n.alert.success {\r\n    background-color: #ddffdd;\r\n    border-left: 6px solid #4CAF50;\r\n}\r\n\r\n.show {\r\n    display: block;\r\n}\r\n\r\n.hide {\r\n    display: none;\r\n}", ""]);
 	
 	// exports
 
+
+/***/ }),
+/* 914 */
+/*!*********************************!*\
+  !*** ./src/components/Alert.js ***!
+  \*********************************/
+/***/ (function(module, exports, __webpack_require__) {
+
+	"use strict";
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = Alert;
+	
+	var _react = __webpack_require__(/*! react */ 365);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function Alert(props) {
+	    var show = props.show,
+	        message = props.message,
+	        type = props.type;
+	
+	    var _className = "alert " + (show ? "show" : "hide") + " " + type;
+	    return _react2.default.createElement(
+	        "div",
+	        { className: _className },
+	        message
+	    );
+	}
+	module.exports = exports['default'];
 
 /***/ })
 /******/ ]);

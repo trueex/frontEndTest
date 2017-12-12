@@ -1,7 +1,35 @@
 .up {
-    background-color: green;
+    color: green;
 }
 
 .down {
-    background-color: red;
+    color: red;
+}
+
+.default {
+    color: black;
+}
+
+.alert {
+    line-height: 2.5;
+    padding-left: 10px;
+    margin-bottom: 10px;
+}
+
+.alert.danger {
+    background-color: #ffdddd;
+    border-left: 6px solid #f44336;
+}
+
+.alert.success {
+    background-color: #ddffdd;
+    border-left: 6px solid #4CAF50;
+}
+
+.show {
+    display: block;
+}
+
+.hide {
+    display: none;
 }

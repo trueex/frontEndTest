@@ -501,5 +501,15 @@ body[dir="rtl"] .fixedDataTableColumnResizerLineLayout_main {
 .public_Scrollbar_faceActive:after {
   background-color: #7d7d7d;
 }
+.up {
+    color: green;
+}
 
+.down {
+    color: red;
+}
+
+.default {
+    color: black;
+}
 /*# sourceMappingURL=main.css.map*/

@@ -17,7 +17,7 @@ export default class MyCell extends Component {
         const { content } = this.state;
         const newContent = this.getInitContent(nextProps);
         if (content !== newContent) {
-            this._className = newContent > content ? "up" : (newContent < content ? "down" : "");
+            this._className = newContent > content ? "up" : (newContent < content ? "down" : "default");
             this.setState({
                 content: newContent
             });

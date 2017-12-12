@@ -4,6 +4,7 @@ import { Cell, Column, ColumnGroup, Table } from 'fixed-data-table';
 import '../../../node_modules/fixed-data-table/dist/fixed-data-table.css';
 import _ from 'lodash';
 import MyCell from '../../components/MyCell';
+import Alert from '../../components/Alert';
 
 @connect(
   state => ({ rows: state.rows, cols: state.cols || new Array(10) })
@@ -14,11 +15,17 @@ export default class App extends Component {
     super(props);
     this.state = {
       rows: [],
-      cols: new Array(10)
+      cols: new Array(10),
+      showAlert: false,
+      alert: {}
     };
     //By using arrow funcions, we can get rid of these bind functions
     this.onSnapshotReceived = this.onSnapshotReceived.bind(this);
     this.onUpdateReceived = this.onUpdateReceived.bind(this);
+    this.onDisconnect = this.onDisconnect.bind(this);
+    this.onReconnnectAttempt = this.onReconnnectAttempt.bind(this);
+    this.onReconnect = this.onReconnect.bind(this);
+    this.onReconnectFailed = this.onReconnectFailed.bind(this);
     // this._cell = this._cell.bind(this);
     this._headerCell = this._headerCell.bind(this);
     this._generateCols = this._generateCols.bind(this);
@@ -53,6 +60,7 @@ export default class App extends Component {
     const cols = Object.keys(rows[0]);
     this.setState({ rows, cols });
   };
+
   onUpdateReceived(data) {
     // const rows = this.state.rows.concat(data);
 
@@ -74,6 +82,52 @@ export default class App extends Component {
     this.setState({ rows });
   };
 
+  onDisconnect() {
+    this.setState({
+      showAlert: true,
+      alert: {
+        message: "Connection lost, trying to reconnect...",
+        type: "danger"
+      }
+    });
+  }
+
+  onReconnnectAttempt(number) {
+    this.setState({
+      showAlert: true,
+      alert: {
+        message: "Number of attempts: " + number,
+        type: "danger"
+      }
+    });
+  }
+
+  onReconnect() {
+    this.setState({
+      showAlert: true,
+      alert: {
+        message: "Reconnected!",
+        type: "success"
+      }
+    });
+    window.setTimeout(() => {
+      this.setState({
+        showAlert: false,
+        alert: {}
+      });
+    }, 1500);
+  }
+
+  onReconnectFailed() {
+    this.setState({
+      showAlert: true,
+      alert: {
+        message: "Unable to reconnect, please try again later.",
+        type: "danger"
+      }
+    });
+  }
+
   // _cell(cellProps) {
   //   const rowIndex = cellProps.rowIndex;
   //   const rowData = this.state.rows[rowIndex];
@@ -92,7 +146,6 @@ export default class App extends Component {
   }
 
   _generateCols() {
-    console.log('generating...');
     let cols = [];
     this.state.cols.forEach((row, index) => {
       cols.push(
@@ -110,34 +163,45 @@ export default class App extends Component {
         />
       );
     });
-    console.log(cols);
     return cols;
   };
   componentDidMount() {
-    if (socket) {
-      socket.on('snapshot', this.onSnapshotReceived);
-      socket.on('updates', this.onUpdateReceived);
+    if (window.socket) {
+      window.socket.on('snapshot', this.onSnapshotReceived);
+      window.socket.on('updates', this.onUpdateReceived);
+      window.socket.on('disconnect', this.onDisconnect);
+      window.socket.on('reconnect_attempt', this.onReconnnectAttempt);
+      window.socket.on('reconnect', this.onReconnect);
+      window.socket.on('reconnect_failed', this.onReconnectFailed);
     }
   };
   componentWillUnmount() {
-    if (socket) {
-      socket.removeListener('snapshot', this.onSnapshotReceived);
-      socket.removeListener('updates', this.onUpdateReceived);
+    if (window.socket) {
+      window.socket.removeListener('snapshot', this.onSnapshotReceived);
+      window.socket.removeListener('updates', this.onUpdateReceived);
+      window.socket.removeListener('disconnect', this.onDisconnect);
+      window.socket.removeListener('reconnect_attempt', this.onReconnnectAttempt);
+      window.socket.removeListener('reconnect', this.onReconnect);
+      window.socket.removeListener('reconnect_failed', this.onReconnectFailed);
     }
   };
 
   render() {
     const columns = this._generateCols();
+    const { showAlert, alert } = this.state; 
     return (
-      <Table
-        rowHeight={30}
-        width={window.innerWidth}
-        maxHeight={window.innerHeight}
-        headerHeight={35}
-        rowsCount={this.state.rows.length}
-      >
-        {columns}
-      </Table>
+      <div>
+        <Alert show={showAlert} message={alert.message} type={alert.type}/>
+        <Table
+          rowHeight={30}
+          width={window.innerWidth}
+          maxHeight={window.innerHeight}
+          headerHeight={35}
+          rowsCount={this.state.rows.length}
+        >
+          {columns}
+        </Table>
+      </div>
     );
   }
 }
