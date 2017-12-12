@@ -5,3 +5,5 @@ dist/
 webpack-assets.json
 webpack-stats.json
 npm-debug.log
+build/ui-dist/main.css
+build/ui-dist/main.js
